@@ -1,36 +1,33 @@
 #!/usr/bin/env python3
-"""Basic RNA secondary-structure predictor using Nussinov dynamic programming.
-
-This is an educational predictor. It maximizes the number of canonical base pairs
-(A-U, U-A, G-C, C-G) and allows G-U wobble pairs. It does not model thermodynamics.
-"""
-
+"""Basic RNA secondary-structure predictor using Nussinov dynamic programming."""
+from __future__ import annotations
+import argparse
+import json
+import re
 from typing import List, Tuple
 
-MIN_LOOP = 3
-PAIR_SCORES = {
-    ("A", "U"): 1,
-    ("U", "A"): 1,
-    ("G", "C"): 1,
-    ("C", "G"): 1,
-    ("G", "U"): 1,
-    ("U", "G"): 1,
-}
+CANONICAL = {("A", "U"), ("U", "A"), ("G", "C"), ("C", "G")}
+WOBBLE = {("G", "U"), ("U", "G")}
 
 
-def can_pair(a: str, b: str) -> bool:
-    return (a, b) in PAIR_SCORES
-
-
-def nussinov(sequence: str) -> Tuple[str, List[Tuple[int, int]]]:
-    """Predict a structure in dot-bracket notation."""
-    seq = sequence.upper().replace(" ", "").replace("\n", "")
+def validate_sequence(sequence: str) -> str:
+    seq = re.sub(r"\s+", "", sequence).upper().replace("T", "U")
     if not seq:
         raise ValueError("RNA sequence cannot be empty.")
-    invalid = set(seq) - set("ACGU")
+    invalid = sorted(set(seq) - set("ACGU"))
     if invalid:
-        raise ValueError(f"Invalid RNA base(s): {', '.join(sorted(invalid))}")
+        raise ValueError(f"Invalid RNA base(s): {', '.join(invalid)}. Use A, C, G, U.")
+    return seq
 
+
+def can_pair(a: str, b: str, allow_wobble: bool = True) -> bool:
+    return (a, b) in CANONICAL or (allow_wobble and (a, b) in WOBBLE)
+
+
+def predict_structure(sequence: str, min_loop: int = 3, allow_wobble: bool = True) -> dict:
+    seq = validate_sequence(sequence)
+    if min_loop < 0:
+        raise ValueError("Minimum loop length cannot be negative.")
     n = len(seq)
     dp = [[0] * n for _ in range(n)]
 
@@ -38,13 +35,10 @@ def nussinov(sequence: str) -> Tuple[str, List[Tuple[int, int]]]:
         for i in range(n - span):
             j = i + span
             best = max(dp[i + 1][j], dp[i][j - 1])
-
-            if j - i > MIN_LOOP and can_pair(seq[i], seq[j]):
-                best = max(best, dp[i + 1][j - 1] + PAIR_SCORES[(seq[i], seq[j])])
-
+            if j - i > min_loop and can_pair(seq[i], seq[j], allow_wobble):
+                best = max(best, dp[i + 1][j - 1] + 1)
             for k in range(i + 1, j):
                 best = max(best, dp[i][k] + dp[k + 1][j])
-
             dp[i][j] = best
 
     pairs: List[Tuple[int, int]] = []
@@ -56,8 +50,9 @@ def nussinov(sequence: str) -> Tuple[str, List[Tuple[int, int]]]:
             traceback(i + 1, j)
         elif dp[i][j] == dp[i][j - 1]:
             traceback(i, j - 1)
-        elif j - i > MIN_LOOP and can_pair(seq[i], seq[j]) and dp[i][j] == dp[i + 1][j - 1] + 1:
-            pairs.append((i, j))
+        elif (j - i > min_loop and can_pair(seq[i], seq[j], allow_wobble)
+              and dp[i][j] == dp[i + 1][j - 1] + 1):
+            pairs.append((i + 1, j + 1))
             traceback(i + 1, j - 1)
         else:
             for k in range(i + 1, j):
@@ -66,34 +61,54 @@ def nussinov(sequence: str) -> Tuple[str, List[Tuple[int, int]]]:
                     traceback(k + 1, j)
                     return
 
-    traceback(0, n - 1)
+    if n > 1:
+        traceback(0, n - 1)
     pairs.sort()
-
     structure = ["."] * n
     for i, j in pairs:
-        structure[i] = "("
-        structure[j] = ")"
-    return "".join(structure), pairs
+        structure[i - 1] = "("
+        structure[j - 1] = ")"
+
+    return {
+        "sequence": seq,
+        "length": n,
+        "structure": "".join(structure),
+        "base_pair_count": len(pairs),
+        "base_pairs": [
+            {"position_1": i, "position_2": j, "bases": f"{seq[i-1]}-{seq[j-1]}",
+             "type": "canonical" if (seq[i-1], seq[j-1]) in CANONICAL else "wobble"}
+            for i, j in pairs
+        ],
+        "minimum_loop_length": min_loop,
+        "wobble_pairs_enabled": allow_wobble,
+        "algorithm": "Nussinov dynamic programming",
+        "complexity": {"time": "O(n^3)", "space": "O(n^2)"},
+        "warning": "Educational basic predictor; it maximizes base-pair count and does not calculate thermodynamic free energy."
+    }
 
 
 def main() -> None:
-    print("Basic RNA Secondary Structure Predictor")
-    print("Authors: R. Akshith Narasimha (SE25UBIT048); D. Anjana Reddy (SE25UBIT048)")
-    sequence = input("Enter RNA sequence (A, C, G, U): ").strip()
+    parser = argparse.ArgumentParser(description="Predict RNA secondary structure in dot-bracket notation.")
+    parser.add_argument("sequence", nargs="?", help="RNA sequence using A/C/G/U")
+    parser.add_argument("--min-loop", type=int, default=3)
+    parser.add_argument("--no-wobble", action="store_true", help="Disable G-U wobble pairs")
+    parser.add_argument("--json", action="store_true", help="Output machine-readable JSON")
+    args = parser.parse_args()
+    sequence = args.sequence or input("Enter RNA sequence (A, C, G, U): ")
     try:
-        structure, pairs = nussinov(sequence)
+        result = predict_structure(sequence, args.min_loop, not args.no_wobble)
     except ValueError as exc:
-        print(f"Error: {exc}")
-        return
-
-    print("\nSequence :", sequence.upper().replace(" ", ""))
-    print("Structure:", structure)
-    print("Base pairs:", len(pairs))
-    if pairs:
-        print("Paired positions (1-based):", ", ".join(f"{i + 1}-{j + 1}" for i, j in pairs))
+        parser.error(str(exc))
+    if args.json:
+        print(json.dumps(result, indent=2))
     else:
-        print("No compatible base pairs found.")
-    print("\nNote: This is a basic educational predictor based on the Nussinov algorithm.")
+        print("\n=== RNA Secondary Structure Predictor ===")
+        print(f"Sequence : {result['sequence']}")
+        print(f"Length   : {result['length']}")
+        print(f"Structure: {result['structure']}")
+        print(f"Pairs    : {result['base_pair_count']}")
+        print(f"Pairs    : {', '.join(f'{p['position_1']}-{p['position_2']}' for p in result['base_pairs']) or 'None'}")
+        print(f"Algorithm: {result['algorithm']}")
 
 
 if __name__ == "__main__":
