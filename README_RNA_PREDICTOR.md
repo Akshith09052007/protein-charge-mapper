@@ -1,50 +1,53 @@
-# Basic RNA Secondary Structure Predictor
+# 🧬 RNA Secondary Structure Basic Predictor
 
 **Authors**
 - R. Akshith Narasimha — SE25UBIT048
 - D. Anjana Reddy — SE25UBIT048
 
 ## Overview
-
-This project implements a basic RNA secondary-structure predictor using the **Nussinov dynamic programming algorithm**. Given an RNA sequence, it predicts a secondary structure in **dot-bracket notation** by maximizing the number of compatible base pairs.
+A full-stack educational RNA secondary-structure predictor using the **Nussinov dynamic-programming algorithm**. It predicts dot-bracket structure by maximizing compatible base pairs.
 
 ## Features
+- Clean browser interface
+- Flask REST backend
+- JSON prediction API
+- A/C/G/U validation; T automatically becomes U
+- Canonical A-U and G-C pairs
+- Optional G-U wobble pairs
+- Configurable minimum loop length
+- Base-pair positions and pair types
+- Health-check endpoint
+- CLI mode
 
-- Accepts RNA sequences containing A, C, G and U.
-- Predicts canonical A-U and G-C pairs.
-- Includes G-U wobble pairs.
-- Enforces a minimum loop length of 3 nucleotides.
-- Reports predicted dot-bracket structure and paired positions.
-- Provides clear input validation and an educational explanation.
-
-## Requirements
-
-- Python 3.8+
-- No external packages required.
-
-## Run
-
+## Run locally
 ```bash
-python3 rna_predictor.py
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python app.py
+```
+Then open **http://localhost:5000**.
+
+## CLI
+```bash
+python rna_predictor.py GGGAAACCC
+python rna_predictor.py GGGAAACCC --json
+python rna_predictor.py GGGAAACCC --min-loop 4 --no-wobble
 ```
 
-Example input:
+## API
+### `GET /api/health`
+Returns service status.
 
-```text
-GGGAAACCC
+### `POST /api/predict`
+Request:
+```json
+{"sequence":"GGGAAACCC","min_loop":3,"allow_wobble":true}
 ```
-
-The program prints the input sequence, predicted dot-bracket structure, number of base pairs, and paired nucleotide positions.
+Response includes normalized sequence, length, dot-bracket structure, pair count, paired positions, pair types, algorithm and complexity.
 
 ## Algorithm
+Nussinov considers leaving either endpoint unpaired, pairing compatible endpoints, or splitting an interval into two subproblems. Complexity is **O(n³) time** and **O(n²) space**.
 
-For a sequence of length `n`, the Nussinov dynamic-programming table stores the maximum number of base pairs possible for every subsequence. Each state considers leaving either end unpaired, pairing compatible bases, or splitting the subsequence into two smaller subsequences. A traceback reconstructs the predicted base pairs.
-
-### Complexity
-
-- Time: **O(n^3)**
-- Space: **O(n^2)**
-
-## Scope and limitations
-
-This is a **basic educational predictor**, not a production-grade RNA folding package. It does not use experimentally measured constraints, pseudoknot prediction, or thermodynamic free-energy parameters. Consequently, its structure should not be treated as a biological ground truth.
+## Limitations
+This is a basic educational predictor. It does not calculate thermodynamic free energy, pseudoknots, experimental constraints, or the full set of biological folding effects. Predictions should not be treated as biological ground truth.
