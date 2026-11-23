@@ -1,10 +1,15 @@
 # RNA Secondary Structure Basic Predictor
 
-A beginner-friendly bioinformatics project that predicts a basic RNA secondary structure using the **Nussinov dynamic programming algorithm**. It provides a browser interface, a JSON API, and a command-line interface.
+A Python-only educational bioinformatics project that predicts a basic RNA secondary structure using the **Nussinov dynamic programming algorithm**. The project includes a Python desktop interface (Tkinter), a Python prediction engine, a Python command-line interface, and Python unit tests.
 
 ## Authors
 - R. Akshith Narasimha — SE25UBIT048
 - D. Anjana Reddy — SE25UBIT008
+
+## Technologies
+- **Python 3.10+** — all application logic, validation, prediction, and tests.
+- **Tkinter** — desktop graphical interface (included with most Python installations).
+- **Python standard library only** — no Flask, HTML, CSS, JavaScript, or third-party Python packages are required.
 
 ## Features
 - Accepts RNA sequences containing A, C, G, and U (DNA T is automatically converted to U).
@@ -12,34 +17,24 @@ A beginner-friendly bioinformatics project that predicts a basic RNA secondary s
 - Supports canonical A-U and G-C pairs, with optional G-U wobble pairs.
 - Lets the user choose the minimum hairpin loop length.
 - Displays paired nucleotide positions and pair types.
-- Includes input validation, a health endpoint, and automated unit tests.
-- Runs locally; no external bioinformatics service or API key is required.
+- Includes input validation, a desktop interface, a command-line interface, and automated unit tests.
+- Runs locally without an internet connection or external API.
 
-## Run locally
+## Run the desktop application
 
-Python 3.10 or newer is recommended.
+Python 3.10 or newer is recommended. Tkinter should be available in your Python installation.
 
 ```bash
-# 1. Clone the repository and enter this branch
+# Clone the repository
 git clone https://github.com/Akshith09052007/protein-charge-mapper.git
 cd protein-charge-mapper
 git checkout rna-secondary-structure-predictor
 
-# 2. Create and activate a virtual environment
-python -m venv .venv
-# macOS / Linux:
-source .venv/bin/activate
-# Windows PowerShell:
-# .venv\Scripts\Activate.ps1
-
-# 3. Install dependencies
-python -m pip install -r requirements.txt
-
-# 4. Start the web application
+# Launch the desktop application
 python app.py
 ```
 
-Open **http://127.0.0.1:5000** in your browser.
+A desktop window will open. Enter an RNA sequence, choose the minimum loop length, optionally enable G-U wobble pairing, and click **Predict RNA Structure**.
 
 ## Command-line usage
 
@@ -51,25 +46,11 @@ python rna_predictor.py GGGAAACCC --json
 
 Omit the sequence to enter it interactively.
 
-## API
+## Run tests
 
-### Health check
-`GET /api/health`
-
-### Predict
-`POST /api/predict`
-
-Example request:
-
-```json
-{
-  "sequence": "GGGAAACCC",
-  "min_loop": 3,
-  "allow_wobble": true
-}
+```bash
+python -m unittest discover -s tests -v
 ```
-
-A successful response contains `success: true` and a `result` object with the normalized sequence, dot-bracket structure, base-pair list, settings, algorithm, and complexity. Invalid input returns HTTP 400 with an explanatory error.
 
 ## Algorithm
 
@@ -83,12 +64,6 @@ A traceback reconstructs the base pairs. Positions in the output are **1-based**
 
 - Time complexity: **O(n³)**
 - Space complexity: **O(n²)**
-
-## Run tests
-
-```bash
-python -m unittest discover -s tests -v
-```
 
 ## Scientific scope and limitations
 
